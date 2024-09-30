@@ -1,0 +1,261 @@
+---
+title: "EDS 223: Week 1 Lab"
+format: html
+editor_options: 
+  chunk_output_type: console
+---
+
+### Set Up 
+
+```{r}
+#install.packages("sf")
+#install.packages("stars")
+#install.packages("tmap")
+```
+
+```{r}
+library(sf) # for vector data (more soon!)
+library(stars) # for raster data (more soon!)
+library(tmap) # for static and interactive maps
+library(here)
+```
+
+```{r}
+# raster of global elevation
+world_elevation <- read_stars(here("data", "worldelevation.tif"))
+
+# country boundaries 
+world_vector <- read_sf(here("data", "worldvector.gpkg"))
+
+# major cities 
+world_cities <- read_sf(here("data", "worldcities.gpkg"))
+```
+
+
+### Making a map 
+
+Here is a basic map using `tmap`
+```{r}
+# doing in ggplot 
+#ggplot(data = ) +
+  #geom_points()
+
+# using tmap to create basic map of the world 
+tm_shape(world_vector) +
+  tm_polygons() +
+  tm_shape(world_cities) + #adding a layer that includes cities in dot form 
+  tm_dots()
+```
+
+We can also include raster data in our map 
+```{r}
+tm_shape(world_elevation) +
+  tm_raster() +
+tm_shape(world_vector) +
+  tm_borders() + # changed this to borders 
+  tm_shape(world_cities) + #adding a layer that includes cities in dot form 
+  tm_dots()
+```
+
+
+See what happens when we do the cities first 
+- Gives us a very different map 
+- Whichever map you put first in the code will set certain parameters 
+
+```{r}
+tm_shape(world_cities) + #cities first 
+  tm_dots() + 
+tm_shape(world_elevation) +
+  tm_raster() +
+tm_shape(world_vector) +
+  tm_borders()
+```
+
+
+### Selecting a boundary in your map 
+```{r}
+tm_shape(world_elevation, bbox = c(-15, 35, 45, 65)) + # add bounding box to restrict extent
+  tm_raster() + 
+tm_shape(world_vector) +
+  tm_borders() 
+```
+
+```{r}
+tm_shape(world_elevation, bbox = world_cities) + # add bounding box to restrict based on other data
+  tm_raster() + 
+tm_shape(world_vector) +
+  tm_borders() 
+```
+
+### Polygons 
+The main function to visualize polygons is `tm_polygons()`. By default, it plots the internal area of the polygon in light grey and the polygon borders in slightly darker grey.
+
+```{r}
+# map with dahsed borders 
+tm_shape(world_vector) +
+  tm_polygons(col = "lightblue",
+              border.col = "black",
+              lwd = 0.5, #line width 
+              lty = "dashed") # line type 
+```
+
+```{r}
+# just the borders 
+tm_shape(world_vector) +
+  tm_borders(col = "red")
+```
+
+```{r}
+# fill in the countries 
+tm_shape(world_vector) +
+  tm_fill(col = "lightblue")
+```
+
+```{r}
+# displaying global emissions 
+tm_shape(world_vector) + 
+  tm_fill("CO2_emissions")
+```
+
+
+### Symbols 
+- tm_squares(): uses square symbols (shape = 22)
+- tm_bubbles(): uses large circle symbols
+- tm_dots(): uses small circle symbols (good for displaying many locations)
+- tm_markers(): uses marker icons
+```{r}
+# using symbols for the cities 
+# default is light gray dark gray circles
+tm_shape(world_cities) +
+  tm_symbols()
+```
+
+```{r}
+tm_shape(world_cities) +
+  tm_squares()
+```
+
+
+## Visual variables 
+```{r}
+tm_shape(world_vector) +
+  tm_polygons("life_expectancy",
+              palette = c("yellow", "darkgreen"),
+              title = "Life Expecrancy (years)")
+```
+
+### Colors 
+
+There are dozens of packages that contain hundreds of color palettes. The most popular are `RColorBrewer` and `viridis`. By default, tmap attempts to identify the type of the data being plotted and selects on of the built-in palettes.
+
+```{r}
+#install.packages("viridisLite")
+library(viridisLite)
+
+# these pallets are very colorblind friendly 
+```
+
+```{r}
+tm_shape(world_vector) +
+  tm_polygons("life_expectancy",
+              palette = viridis(8),
+              title = "Life Expectancy (years)")
+```
+ 
+ Other options in `viridis` 
+```{r}
+tm_shape(world_vector) +
+  tm_polygons("life_expectancy",
+              palette = viridis(option = "plasma", 8),
+              title = "Life Expectancy (years)")
+```
+ 
+ 
+### Size 
+```{r}
+# size of symbol = population size 
+tm_shape(world_vector) +
+  tm_polygons() +
+  tm_shape(world_cities) +
+  tm_symbols(size = "pop2020",
+             legend.size.is.portrait = TRUE)
+```
+
+
+
+## Layout 
+
+### Grid lines 
+- Not super helpful for global map, but extremely useful for smaller maps 
+```{r}
+# using `tm_grid`
+tm_shape(world_vector) +
+  tm_fill() +
+  tm_grid()
+```
+
+```{r}
+# latitude and longitude 
+tm_shape(world_vector) +
+  tm_graticules() + 
+  tm_fill()
+```
+
+
+### Scale and compass 
+
+```{r}
+# including a compass and scale 
+tm_shape(world_vector) +
+  tm_fill() +
+  tm_scale_bar() +
+  tm_compass(position = c("left", "top"))
+```
+
+```{r}
+tm_shape(world_vector) +
+  tm_fill(col = "wb_income_region",
+          palette = viridis(option = "plasma", 5),
+          title = "Regional Income") +
+  tm_layout(bg.color = "grey95",
+            main.title = "Global income by country",
+            frame = FALSE)
+```
+
+
+## Interactive options 
+`tmap_mode"
+- "plot" = static plot 
+- "view" = makes it interactive 
+```{r}
+tmap_mode("view")  
+
+tm_shape(world_vector) +
+  tm_fill(col = "wb_income_region",
+          palette = viridis(option = "plasma", 5),
+          title = "Regional Income") +
+  tm_layout(bg.color = "grey95",
+            main.title = "Global income by country",
+            frame = FALSE)
+```
+
+To return to regular plotting mode, simply reset tmap_mode.
+```{r}
+tmap_mode("plot")
+```
+
+
+## Saving maps 
+- Use `tmap_save()` to save a map you made 
+```{r}
+map1 <- tm_shape(world_vector) +
+  tm_fill(col = "gdp_per_cap",
+          palette = viridisLite::plasma(10),
+          title = "GDP per capita") +
+  tm_layout(main.title = "Global gross domesic product")
+
+tmap_save(map1, here("tmap-example.png"))
+```
+
+
+
